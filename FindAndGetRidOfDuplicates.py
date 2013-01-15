@@ -6,13 +6,15 @@ import os, sys, shutil
 import logging
 
 
+
+
 class FileDuplicates:
 
 
 
     logging.basicConfig(format="%(levelname)s:%(filename)s::%(funcName)s %(message)s")
     logger=logging.getLogger('ProcessDirs')
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.ERROR)
     
 
 
