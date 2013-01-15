@@ -93,9 +93,8 @@ class testFileDuplicatesCase(unittest.TestCase):
 
 def main():
 
-#    suite = unittest.TestLoader().loadTestsFromTestCase(testFileDuplicatesCase)
     suite=unittest.TestSuite()
-    suite.addTest(testFileDuplicatesCase('testDispDirContents'))
+#    suite.addTest(testFileDuplicatesCase('testDispDirContents'))
     suite.addTest(testFileDuplicatesCase('testIter'))
     suite.addTest(testFileDuplicatesCase('testSame'))
     suite.addTest(testFileDuplicatesCase('testSamePerDev'))
