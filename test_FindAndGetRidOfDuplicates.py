@@ -3,6 +3,7 @@
 import unittest
 import os
 import hashlib
+import re
 
 from FindAndGetRidOfDuplicates import FileDuplicates
 
@@ -74,8 +75,13 @@ class testFileDuplicatesCase(unittest.TestCase):
         self.dirobj.collectSame()
         self.dirobj.groupSamePerDev()
         self.dirobj.hardlinkSame()
+
         for filepath in self.dirobj.arethesame_perdevice:
+
             for dev in self.dirobj.arethesame_perdevice[filepath]:
+
+                if re.compile("ntfs|vfat").match(self.dirobj.devices[dev][1]):
+                    continue
 
                 pathperdevlist=self.dirobj.arethesame_perdevice[filepath][dev]
                 rootlink=filepath

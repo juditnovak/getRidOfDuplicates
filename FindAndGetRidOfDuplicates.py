@@ -4,7 +4,7 @@
 import hashlib
 import os, sys, shutil
 import logging
-
+import re
 
 
 
@@ -14,21 +14,23 @@ class FileDuplicates:
 
     logging.basicConfig(format="%(levelname)s:%(filename)s::%(funcName)s %(message)s")
     logger=logging.getLogger('ProcessDirs')
-    logger.setLevel(logging.ERROR)
+    logger.setLevel(logging.DEBUG)
     
+    # Dictionary of affected devices 
+    devices={}
 
 
     def __init__(self, topdir):
         try:
             self.topdir=topdir
-            self.dirs = os.walk(self.topdir)
+            self.dirs = os.walk(self.topdir, followlinks=True)
             self.arethesame={}
             self.arethesame_perdevice={}
             self.actual_files=[]
             self.actual_dir=[]
 
         except OSError, e:
-           self.__class__.logger.error("0!s".format(e)) 
+           self.logger.error("0!s".format(e)) 
 
 
 
@@ -46,7 +48,7 @@ class FileDuplicates:
             while not self.actual_files:
                 (self.actual_dir, subdirs, self.actual_files) = self.dirs.next()
             actual_file=os.path.join(self.actual_dir, self.actual_files.pop(0))
-        self.__class__.logger.debug("{0!s}".format(actual_file))
+        self.logger.debug("{0!s}".format(actual_file))
         return actual_file
 
 
@@ -80,7 +82,7 @@ class FileDuplicates:
         for shaval in keys:
             if not self.arethesame[shaval] or len(self.arethesame[shaval]) == 1:
                 del self.arethesame[shaval]
-        self.__class__.logger.debug("{0!r}".format(self.arethesame))
+        self.logger.debug("{0!r}".format(self.arethesame))
 
     
 
@@ -94,17 +96,41 @@ class FileDuplicates:
             for filepath in samelist:
 
                 device = os.stat(filepath).st_dev
+                minor=os.minor(device)
+                major=os.major(device)
+                devname=None
+
+                pat=re.compile("^\s+{0!s}\s+{1!s}\s+\d+\s+(?P<devname>\w+)".format(major, minor))
+                partitions=open('/proc/partitions', 'r')
+                for line in partitions:
+                    s=pat.search(line)
+                    if s is not None:
+                        devname=s.group('devname')
+                partitions.close()
+
+                pat2=re.compile("^[\w/:]+{0!s}\s+(?P<mountpoint>[\w/]+)\s+(?P<filesystem>\w+)".format(devname))
+                mtab=open('/etc/mtab', 'r')
+                for line in mtab:
+                    s=pat2.search(line)
+                    if s is not None:
+                        filesystem=s.group('filesystem')
+                        mountpoint=s.group('mountpoint')
+                mtab.close()
+
+                self.devices[device]=(devname, filesystem, mountpoint)
+
                 if device in stdevdict:
                     stdevdict[device].append(filepath)
                 else:
                     stdevdict[device]=[filepath]
+
             devices=stdevdict.keys()
             for device in devices:
                 if len(stdevdict[device]) < 2:
                     del stdevdict[device]
             
             self.arethesame_perdevice[filepath]=stdevdict        
-        self.__class__.logger.debug("Files grouped per device: {0!r}".format(self.arethesame_perdevice))
+        self.logger.debug("Files grouped per device: {0!r}".format(self.arethesame_perdevice))
 
 
 
@@ -117,6 +143,13 @@ class FileDuplicates:
 
                 idlist=self.arethesame_perdevice[filepath][dev]
 
+                # Making sure that 'dev' is not VFAT/NTFS, where links are not allowed
+                # By concept arethesame_perdevice should contain all instances 
+                # so we don't remove them from the dict just skip
+                if re.compile("ntfs|vfat").match(self.devices[dev][1]):
+                    self.logger.error("Can't create hard links on {0}, skipping device {1}".format(self.devices[dev][1], format(self.devices[dev][2])))
+                    continue
+
                 # The copy to keep
                 remaining=""
                 if filepath in idlist:
@@ -126,16 +159,16 @@ class FileDuplicates:
                     remaining=idlist.pop(0)
         
                 while not os.access(remaining, os.W_OK):
-                    self.__class__.logger.error("Can't write/remove {0}".format(remaining))
+                    self.logger.error("Can't write/remove {0}".format(remaining))
                     remaining=idlist.pop(0)
 
                 for idfile in idlist:
                     if not os.access(idfile, os.W_OK):
-                        self.__class__.logger.error("Can't write/remove {0}".format(idfile))
+                        self.logger.error("Can't write/remove {0}".format(idfile))
                         idlist.remove(idfile)
                         continue
                     tmpfile=idfile + ".orig"
-                    self.__class__.logger.debug("Moving {0} to {1} (temp file)".format(idfile, tmpfile))
+                    self.logger.debug("Moving {0} to {1} (temp file)".format(idfile, tmpfile))
                     shutil.move(idfile, tmpfile)
                     self.__class__.logger.debug("Linking {0} to {1} (temp file)".format(idfile, remaining))
                     os.link(remaining, idfile)

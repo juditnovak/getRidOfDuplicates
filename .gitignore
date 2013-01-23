@@ -6,4 +6,5 @@
 *.rel
 *.rst
 *.sym
-
+FindAndGetRidOfDuplicates.pyc
+.test_FindAndGetRidOfDuplicates.py.swp

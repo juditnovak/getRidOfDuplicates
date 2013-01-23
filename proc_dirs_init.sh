@@ -5,6 +5,8 @@ ROOTDIR=/tmp/mylittledir
 DIR1=$ROOTDIR/onemoredir
 DIR2=$ROOTDIR/onemoredir/andevenonemorelevel
 DIR3=$ROOTDIR/yetanotherdir
+DIR4=$ROOTDIR/otherfsdir
+DIR5=$ROOTDIR/otherfsdir/otherfs2ndlev
 
 rm -fr $ROOTDIR
 
@@ -28,4 +30,11 @@ ln -s $DIR3/passwd_yetanother $DIR1
 echo "Geza" > $ROOTDIR/singlefile
 ln -s $ROOTDIR/singlefile $DIR2
 
+
+ln -s "/mnt/usbhd-sdc1/test" $DIR4 
+mkdir $DIR5
+
+cp $ROOTDIR/passwd $DIR4
+cp $ROOTDIR/passwd $DIR4/passwd_yetanother_otherfs
+cp $ROOTDIR/passwd $DIR5/passwd_yetanother_otherfs
 
