@@ -2,6 +2,7 @@
 
 
 ROOTDIR=/tmp/mylittledir
+ROOTDIR2=/tmp/mylittledir_copy
 DIR1=$ROOTDIR/onemoredir
 DIR2=$ROOTDIR/onemoredir/andevenonemorelevel
 DIR3=$ROOTDIR/yetanotherdir
@@ -37,4 +38,13 @@ mkdir $DIR5
 cp $ROOTDIR/passwd $DIR4
 cp $ROOTDIR/passwd $DIR4/passwd_yetanother_otherfs
 cp $ROOTDIR/passwd $DIR5/passwd_yetanother_otherfs
+
+mkdir -p $ROOTDIR2
+cp $ROOTDIR/passwd $ROOTDIR2
+cp $ROOTDIR/passwd $ROOTDIR2/passwd2
+cp -r $DIR3 $ROOTDIR2
+cp -r $DIR2 $ROOTDIR2
+
+
+
 

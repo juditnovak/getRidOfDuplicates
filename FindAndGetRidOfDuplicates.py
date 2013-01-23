@@ -7,6 +7,17 @@ import logging
 import re
 
 
+class FileDuplError(Exception):
+
+    def __init__(self, value):
+
+        self.value=value
+
+    def __str__(self):
+
+        return repr("[ERROR:FileDuplError]: ".format(self.value))
+
+
 
 class FileDuplicates:
 
@@ -20,16 +31,27 @@ class FileDuplicates:
     devices={}
 
 
-    def __init__(self, topdir):
+    def __init__(self, topdirs):
+
         try:
-            self.topdir=topdir
-            self.dirs = os.walk(self.topdir, followlinks=True)
+
+            if len(topdirs) > 0:
+                self.topdirs=iter(topdirs)
+            else:
+                raise FileDuplError("Directory list is empty")
+
+            curdir=self.topdirs.next()
+            if not os.path.isdir(curdir):
+                raise FileDuplError("Not a directory {0!w}".format(curdir))
+
+            self.dirs = os.walk(curdir, followlinks=True)
             self.arethesame={}
             self.arethesame_perdevice={}
             self.actual_files=[]
             self.actual_dir=[]
 
         except OSError, e:
+
            self.logger.error("0!s".format(e)) 
 
 
@@ -46,7 +68,18 @@ class FileDuplicates:
         actual_file=""
         while not (actual_file and os.path.isfile(actual_file) and not os.path.islink(actual_file)):
             while not self.actual_files:
-                (self.actual_dir, subdirs, self.actual_files) = self.dirs.next()
+                try: 
+
+                    (self.actual_dir, subdirs, self.actual_files) = self.dirs.next()
+
+                except StopIteration:
+
+                    curdir=self.topdirs.next()
+                    if not os.path.isdir(curdir):
+                        raise FileDuplError("Not a directory {0!w}".format(curdir))
+                    self.dirs=os.walk(curdir, followlinks=True)
+                    (self.actual_dir, subdirs, self.actual_files) = self.dirs.next()
+
             actual_file=os.path.join(self.actual_dir, self.actual_files.pop(0))
         self.logger.debug("{0!s}".format(actual_file))
         return actual_file
@@ -182,6 +215,51 @@ class FileDuplicates:
 
         # Now the lists only contains files that we had access for, that we dealt with
         self.__class__.logger.debug("Files grouped per device: {0!r}".format(self.arethesame_perdevice))
+
+    def replDuplWithHlink(self):
+
+        self.collectSame()
+        self.groupSamePerDev()
+        self.hardlinkSame()
+
+
+
+
+def main():
+
+
+    yes=re.compile("[yY]")
+    no=re.compile("[nN]")
+
+    yn=""
+    dirs=[]
+    dir=raw_input("Please specify the directories to work on: ")
+    while not no.match(yn):
+        if not os.path.isdir(dir):
+            sys.stderr.write("Directory {0!s} is not a directory\n".format(dir))
+        else:
+            if not dir in dirs: 
+                dirs.append(dir)
+        yn=raw_input("More dirs (y/n): ")
+        while not no.match(yn):
+            if yes.match(yn):
+                dir=raw_input("Please specify the directories to work on: ")
+                break
+            else:
+                sys.stdout.write("Please answer 'y' or 'n'\n")
+                yn=raw_input("More dirs (y/n): ")
+
+    print "{0!r}".format(dirs)
+
+    reducelinksobj=FileDuplicates(dirs)
+    reducelinksobj.replDuplWithHlink()
+
+
+
+if __name__ == '__main__':
+    main()
+
+
 
 
 

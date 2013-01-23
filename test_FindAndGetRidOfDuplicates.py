@@ -14,7 +14,7 @@ class testFileDuplicatesCase(unittest.TestCase):
 
 
     def setUp(self):
-        self.dirobj=FileDuplicates('/tmp/mylittledir')
+        self.dirobj=FileDuplicates(['/tmp/mylittledir', '/tmp/mylittledir_copy'])
 
 
     def testDispDirContents(self):
